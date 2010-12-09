@@ -1,5 +1,6 @@
 package org.wold.classcheck;
 
+import com.techventus.server.voice.Voice;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -68,16 +69,11 @@ public class ClassCheck {
 						String propertyName = classNbr + "." + term + "." + phoneNumber + ".notified";
 						String notified = props.getProperty(propertyName);
 						if (notified == null || !Boolean.parseBoolean(notified)) {
-							Properties clickatellConfig = new Properties();
-							clickatellConfig.load(ClassCheck.class.getResourceAsStream("/clickatell.properties"));
-							SmsSender sender = SmsSender.getClickatellSender(
-									clickatellConfig.getProperty("username"),
-									clickatellConfig.getProperty("password"),
-									clickatellConfig.getProperty("apiid"));
+							Properties gvProps = new Properties();
+							gvProps.load(ClassCheck.class.getResourceAsStream("/google-voice.properties"));
+							Voice voice = new Voice(gvProps.getProperty("username"), gvProps.getProperty("password"));
 							String msg = "Your class (" + classNbr + ") is now available.";
-							sender.connect();
-							sender.sendTextSms(msg, phoneNumber);
-							sender.disconnect();
+							voice.sendSMS(phoneNumber, msg);
 							props.setProperty(propertyName, "true");
 							log.info("Notified " + phoneNumber);
 						} else {
