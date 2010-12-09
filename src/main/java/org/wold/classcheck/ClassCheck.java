@@ -26,41 +26,42 @@ import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 
 public class ClassCheck {
-    private static Logger log = Logger.getLogger(ClassCheck.class);
-    
-    public static void main(String[] args) throws MalformedURLException, IOException, SmsException, SAXException, TransformerException {
-        Options options = new Options();
-        options.addOption("classNbr", true, "class number");
-        options.addOption("term", true, "term in strm format");
-        options.addOption("phoneNumber", true, "phone number to send to (include country code)");
-        CommandLineParser clp = new PosixParser();
-        try {
-            CommandLine cl = clp.parse(options, args);
-            String classNbr = cl.getOptionValue("classNbr");
-            String term = cl.getOptionValue("term");
-            String phoneNumber = cl.getOptionValue("phoneNumber");
-            if (classNbr == null || term == null) {
-                new HelpFormatter().printHelp("classcheck", options);
-            } else {
-                log.info("Checking "+classNbr+" in term "+term);
-                URL url = new URL("https://webapp4.asu.edu/catalog/classlist?&k="+classNbr+"&t="+term+"&e=all");
-                InputStream is = url.openStream();
-                DOMParser parser = new DOMParser();
-                // somehow this prevents errors when using xpath
-                parser.setFeature("http://xml.org/sax/features/namespaces", false);
-                parser.parse(new InputSource(is));
-                Document doc = parser.getDocument();
-                Node node = XPathAPI.selectSingleNode(doc, "//TR[TD/@class='classNbrColumnValue']/TD[@class='availableSeatsColumnValue']/TABLE/TR/TD/SPAN/SPAN[@class='tt']");
-                String status = node.getAttributes().getNamedItem("rel").getTextContent();
-                if (status.equals("#tt_seats-open")) {
-                    log.info("Class is open");
-                    Properties props = new Properties();
-                    File configFile = new File("/tmp/classcheck.properties");
-                    if (configFile.exists()) {
-                        props.load(new FileInputStream(configFile));
-                    }
+
+	private static Logger log = Logger.getLogger(ClassCheck.class);
+
+	public static void main(String[] args) throws MalformedURLException, IOException, SmsException, SAXException, TransformerException {
+		Options options = new Options();
+		options.addOption("classNbr", true, "class number");
+		options.addOption("term", true, "term in strm format");
+		options.addOption("phoneNumber", true, "phone number to send to (include country code)");
+		CommandLineParser clp = new PosixParser();
+		try {
+			CommandLine cl = clp.parse(options, args);
+			String classNbr = cl.getOptionValue("classNbr");
+			String term = cl.getOptionValue("term");
+			String phoneNumber = cl.getOptionValue("phoneNumber");
+			if (classNbr == null || term == null) {
+				new HelpFormatter().printHelp("classcheck", options);
+			} else {
+				log.info("Checking " + classNbr + " in term " + term);
+				URL url = new URL("https://webapp4.asu.edu/catalog/classlist?&k=" + classNbr + "&t=" + term + "&e=all");
+				InputStream is = url.openStream();
+				DOMParser parser = new DOMParser();
+				// somehow this prevents errors when using xpath
+				parser.setFeature("http://xml.org/sax/features/namespaces", false);
+				parser.parse(new InputSource(is));
+				Document doc = parser.getDocument();
+				Node node = XPathAPI.selectSingleNode(doc, "//TR[TD/@class='classNbrColumnValue']/TD[@class='availableSeatsColumnValue']/TABLE/TR/TD/SPAN/SPAN[@class='tt']");
+				String status = node.getAttributes().getNamedItem("rel").getTextContent();
+				if (status.equals("#tt_seats-open")) {
+					log.info("Class is open");
+					Properties props = new Properties();
+					File configFile = new File("/tmp/classcheck.properties");
+					if (configFile.exists()) {
+						props.load(new FileInputStream(configFile));
+					}
 					if (phoneNumber != null) {
-						String propertyName = classNbr+"."+term+"."+phoneNumber+".notified";
+						String propertyName = classNbr + "." + term + "." + phoneNumber + ".notified";
 						String notified = props.getProperty(propertyName);
 						if (notified == null || !Boolean.parseBoolean(notified)) {
 							Properties clickatellConfig = new Properties();
@@ -69,29 +70,29 @@ public class ClassCheck {
 									clickatellConfig.getProperty("username"),
 									clickatellConfig.getProperty("password"),
 									clickatellConfig.getProperty("apiid"));
-							String msg = "Your class ("+classNbr+") is now available.";
+							String msg = "Your class (" + classNbr + ") is now available.";
 							sender.connect();
 							sender.sendTextSms(msg, phoneNumber);
 							sender.disconnect();
 							props.setProperty(propertyName, "true");
-							log.info("Notified "+phoneNumber);
+							log.info("Notified " + phoneNumber);
 						} else {
-							log.info("Not notifying "+phoneNumber+", because they have already been notified");
+							log.info("Not notifying " + phoneNumber + ", because they have already been notified");
 						}
 					} else {
-						System.out.println("Class "+classNbr+" in term "+term+" is open.");
+						System.out.println("Class " + classNbr + " in term " + term + " is open.");
 					}
-                    props.store(new FileOutputStream(configFile), "This file generated by ClassCheck");
-                } else if (status.equals("#tt_seats-reserved")) {
-                    log.info("Class is open, but all seats are reserved");
-                } else if (status.equals("#tt_seats-closed")) {
-                    log.info("Class is closed");
-                } else {
-                    log.error("Unknown status: "+status);
-                }
-            }
-        } catch (ParseException e) {
-            e.printStackTrace();
-        }
-    }
+					props.store(new FileOutputStream(configFile), "This file generated by ClassCheck");
+				} else if (status.equals("#tt_seats-reserved")) {
+					log.info("Class is open, but all seats are reserved");
+				} else if (status.equals("#tt_seats-closed")) {
+					log.info("Class is closed");
+				} else {
+					log.error("Unknown status: " + status);
+				}
+			}
+		} catch (ParseException e) {
+			e.printStackTrace();
+		}
+	}
 }
