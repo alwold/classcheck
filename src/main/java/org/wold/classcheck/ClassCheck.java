@@ -15,6 +15,8 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.cli.PosixParser;
+import org.apache.commons.httpclient.HttpClient;
+import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.log4j.Logger;
 import org.apache.xpath.XPathAPI;
 import org.cyberneko.html.parsers.DOMParser;
@@ -44,8 +46,10 @@ public class ClassCheck {
 				new HelpFormatter().printHelp("classcheck", options);
 			} else {
 				log.info("Checking " + classNbr + " in term " + term);
-				URL url = new URL("https://webapp4.asu.edu/catalog/classlist?&k=" + classNbr + "&t=" + term + "&e=all");
-				InputStream is = url.openStream();
+				HttpClient client = new HttpClient();
+				GetMethod get = new GetMethod("https://webapp4.asu.edu/catalog/classlist?&k=" + classNbr + "&t=" + term + "&e=all");
+				client.executeMethod(get);
+				InputStream is = get.getResponseBodyAsStream();
 				DOMParser parser = new DOMParser();
 				// somehow this prevents errors when using xpath
 				parser.setFeature("http://xml.org/sax/features/namespaces", false);
@@ -59,7 +63,7 @@ public class ClassCheck {
 					File configFile = new File("/tmp/classcheck.properties");
 					if (configFile.exists()) {
 						props.load(new FileInputStream(configFile));
-					}
+					}	
 					if (phoneNumber != null) {
 						String propertyName = classNbr + "." + term + "." + phoneNumber + ".notified";
 						String notified = props.getProperty(propertyName);
